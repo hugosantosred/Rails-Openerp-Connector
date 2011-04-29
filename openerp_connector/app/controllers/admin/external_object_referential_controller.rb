@@ -3,7 +3,7 @@ class Admin::ExternalObjectReferentialController < Admin::BaseController
   def ex_sincronize
     connect_openerp
     ex = ExternalObjectReferential.first
-    ex.hash_to_erp
+    ex.ext_export
   end
 
   private

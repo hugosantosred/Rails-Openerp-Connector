@@ -4,7 +4,7 @@ class CreateExternalFieldReferentials < ActiveRecord::Migration
       t.references :external_object_referential
       t.string :openerp_field
       t.string :rails_field
-      t.string :type
+      t.string :col_type
       t.string :referenced_object
     end
   end
