@@ -68,7 +68,8 @@ class ExternalFieldReferential < ActiveRecord::Base
     if ext_id
       id = ext_id
     else
-      id = create_rails_object(referenced_object, related_id)
+      self.create_rails_object(referenced_object, related_id)
+      self.many2one_in_conversion(oerp_id, related_id)
     end
     id
   end

@@ -109,6 +109,7 @@ class ExternalObjectReferential < ActiveRecord::Base
         elsif field.col_type == 'many2one'
           fields[field.rails_field.parameterize.underscore.to_sym] = obj.send(field.openerp_field) && field.many2one_in_conversion(obj.id)        
         end
+        puts fields
       end
       data << [fields, obj.id]      
     end
@@ -167,7 +168,7 @@ class ExternalObjectReferential < ActiveRecord::Base
   def extid_to_id(ext_id)
     ref = ExternalReferentialId.find(:first, :conditions => ["rails_class = ? and openerp_id = ?", self.rails_model, ext_id])
     if ref
-      return eval(self.rails_model).find(ref.rails_id) #retornamos el objecto rails
+      return eval(ref.rails_class).find(ref.rails_id) #retornamos el objecto rails
     end
     return false
   end
