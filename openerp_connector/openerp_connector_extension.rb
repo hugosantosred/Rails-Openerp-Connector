@@ -8,9 +8,9 @@ class OpenerpConnectorExtension < Spree::Extension
 
   # Please use openerp_connector/config/routes.rb instead for extension routes.
 
-  # def self.require_gems(config)
-  #   config.gem "gemname-goes-here", :version => '1.2.3'
-  # end
+  def self.require_gems(config)
+     config.gem "ooor"
+  end
   
   def activate
 
