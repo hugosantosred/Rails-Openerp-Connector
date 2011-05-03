@@ -27,12 +27,19 @@ class ExternalObjectReferential < ActiveRecord::Base
     if !data
       data = hash_to_rails
     end
+    puts "DATA: #{data}"
     data.each do |item|
+      #begin
       obj = eval(self.rails_model).new(item[0])
       if obj.save
         int_ref = ExternalReferentialId.new(:openerp_id => item[1], :rails_id => obj.id, :rails_class => self.rails_model)
         int_ref.save
+      else
+        logger.info("Error: #{item[0]} no puede guardarse")
       end
+        #rescue        
+        #puts "ERROR: #{self.rails_model} #{item[0]}"
+        #end
     end
   end
   
@@ -60,7 +67,7 @@ class ExternalObjectReferential < ActiveRecord::Base
     objects.each do |obj|
       fields = {}
       self.external_field_referentials.each do |field|
-        if field.col_type == 'string' || field.col_type == 'integer'
+        if field.col_type == 'string' || field.col_type == 'number'
           fields[field.openerp_field.parameterize.underscore.to_sym] = obj[field.rails_field]
         elsif field.col_type == 'one2many'
           fields[field.openerp_field.parameterize.underscore.to_sym] = field.one2many_conversion(obj.id)
@@ -92,6 +99,10 @@ class ExternalObjectReferential < ActiveRecord::Base
     if !created_ids.empty?
       conditions = [['id','not in',created_ids]]
     end
+    #Añadimos a las condiciones las definidas en el objeto (Para importar los productos padres solamente por ejemplo)
+    if self.erp_import_conditions
+      conditions << eval(self.erp_import_conditions)
+    end
     if id
       objects = [eval(self.openerp_model.classify).find(id)]
     else
@@ -100,17 +111,17 @@ class ExternalObjectReferential < ActiveRecord::Base
     
     #Convertir objetos obtenidos de openerp a objetos rails
     objects.each do |obj|
-      fields = {}
-      self.external_field_referentials.each do |field|
-        if field.col_type == 'string' || field.col_type == 'integer'
+      fields = {}      
+      self.external_field_referentials.each do |field|        
+        if field.col_type == 'string' || field.col_type == 'number'
           fields[field.rails_field.parameterize.underscore.to_sym] = obj.send(field.openerp_field)
         elsif field.col_type == 'one2many'
           fields[field.rails_field.parameterize.underscore.to_sym] = field.one2many_in_conversion(obj.id)
         elsif field.col_type == 'many2one'
           fields[field.rails_field.parameterize.underscore.to_sym] = obj.send(field.openerp_field) && field.many2one_in_conversion(obj.id)        
-        end
-        puts fields
+        end        
       end
+      puts "Campos hash to rails: #{fields}"
       data << [fields, obj.id]      
     end
     return data
@@ -162,6 +173,7 @@ class ExternalObjectReferential < ActiveRecord::Base
         ex_id = ExternalReferentialId.new(:openerp_id => category.id, :rails_id => categ.id, :rails_class => self.rails_model)
         ex_id.save
     end
+    puts "Categoría: #{categ.name} #{categ.permalink}"
     return categ      
   end
   

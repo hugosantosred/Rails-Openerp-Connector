@@ -1,0 +1,68 @@
+<h1>External Object</h1>
+Openerp Model: <%= object.openerp_model %><br/>
+Rails Model: <%= object.rails_model %><br/>
+Import Function: <%= object.import_function %><br/>
+Openerp Domain: <%= object.erp_import_conditions %> 
+<h3>Fields:</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Openerp Field:</th>
+      <th>Rails Field:</th>
+      <th>Openerp type:</th>
+      <th>Rails type:</th>
+      <th>Rails referenced model:</th>
+    </tr>
+  </thead>
+  <tbody>
+<% object.external_field_referentials.each do |field| %>
+    <tr>
+      <td><%= field.openerp_field %></td>
+      <td><%= field.rails_field %></td>
+      <td><%= field.col_type %></td>
+      <td><%= field.rails_type %></td>
+      <td><%= field.referenced_object %></td>
+    </tr>
+<% end %>
+  </tbody>
+</table>
+<div id="add-line-item">
+  <fieldset>
+    <legend>Add Field</legend>    
+      <%= label_tag :openerp_field %>
+      <%= text_field_tag :openerp_field,  {}  %>
+      <%= label_tag :rails_field %>
+      <%= text_field_tag :rails_field, {} %>
+      <%= hidden_field_tag :ex_object_id, object.id %><br/>
+      <%= label_tag "Openerp Type" %>
+      <select id="col_type" name="col_type">
+        <option value="string">String</option>
+        <option value="number">Number</option>
+        <option value="one2many">One2Many</option>
+        <option value="many2one">Many2One</option>
+      </select><br/>
+      <%= label_tag "Rails type" %>
+      <select id="rails_type" name="rails_type">
+        <option value="string">String</option>
+        <option value="number">Number</option>
+        <option value="one2many">One2Many</option>
+        <option value="many2one">Many2One</option>
+      </select><br/>
+      <%= label_tag "Rails Related model (Only in many2one or one2many)" %>
+      <%= text_field_tag :rails_related_model, {} %>
+    <div style="float: left; width: 15%; padding-top: 17px;">
+      <%= button_link_to_remote t("add"),
+                         {:url => "/admin/external_field_referentials/",
+                         :method => :post,
+                         :with => "'external_field_referential[openerp_field]=' + $('#openerp_field').val() + '&external_field_referential[rails_field]=' + $('#rails_field').val()" \
+                         + "+ '&external_field_referential[external_object_referential_id]=' + $('#ex_object_id').val() + '&external_field_referential[col_type]=' + $('#col_type').val() " \
+                         + "+ '&external_field_referential[rails_type]=' + $('#rails_type').val() + '&external_field_referential[referenced_object]=' + $('#rails_related_model').val()" ,
+                         #:before => "if($('#add_variant_id').val()==''){ return false; }",
+                         #:after => "$('#add_product_name').val('');$('#add_variant_id').val('');$('#add_quantity').val(1)",
+                         #:update => "order-form-wrapper",  
+                        }, :icon => 'add'
+                        %>
+    </div>
+
+  </fieldset>
+</div>

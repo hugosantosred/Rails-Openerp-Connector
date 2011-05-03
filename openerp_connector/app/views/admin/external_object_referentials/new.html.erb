@@ -1,0 +1,12 @@
+<% form_for(:external_object_referential,  :url => collection_url) do |f| %>
+<%= f.label :openerp_model %> 
+<%= f.text_field :openerp_model %> <br/>
+<%= f.label :rails_model %>
+<%= f.text_field :rails_model %><br/>
+<%= f.label :import_function %>
+<%= f.text_field :import_function %><br/>
+<%= f.label :erp_import_conditions %>
+<%= f.text_field :erp_import_conditions %>
+
+<%= f.submit %>
+<% end %>

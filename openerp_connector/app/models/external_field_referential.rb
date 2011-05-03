@@ -26,7 +26,7 @@ class ExternalFieldReferential < ActiveRecord::Base
     ext_object = self.external_object_referential.openerp_model    
     oerp_obj = eval(ext_object.classify).find(oerp_id)
     referenced_object = ExternalObjectReferential.find_by_rails_model(self.referenced_object)
-    ids = []
+    ids = []    
     oerp_obj.send(self.openerp_field).each do |field|
       ext_id = referenced_object.extid_to_id(field.id)
       if ext_id
@@ -43,11 +43,12 @@ class ExternalFieldReferential < ActiveRecord::Base
     rails_obj = eval(ext_object).find(rails_id)
     referenced_object = ExternalObjectReferential.find_by_rails_model(self.referenced_object)
     id = nil
+    
     if !related_id
       related_id = rails_obj.send(self.rails_field)
     end
     ext_id = referenced_object.id_to_extid(related_id)
-    if ext_id
+    if ext_id      
       id = ext_id
     else
       #Si no encuentra la id la creamos en openerp
@@ -61,17 +62,20 @@ class ExternalFieldReferential < ActiveRecord::Base
     oerp_obj = eval(ext_object.classify).find(oerp_id)
     referenced_object = ExternalObjectReferential.find_by_rails_model(self.referenced_object)
     id = nil
+    puts "REFERENCED_OBJECT: #{referenced_object.rails_model}"
     if !related_id
       related_id = oerp_obj.send(self.openerp_field).id
     end
     ext_id = referenced_object.extid_to_id(related_id)
-    if ext_id
-      id = ext_id
+    if !ext_id    
+      ext_id = self.create_rails_object(referenced_object, related_id)      
+    end    
+    if rails_type == 'one2many'
+      id = []
+      id << ext_id
     else
-      self.create_rails_object(referenced_object, related_id)
-      self.many2one_in_conversion(oerp_id, related_id)
+      id = ext_id
     end
-    id
   end
   
   def create_erp_object(referenced_object, rails_id)

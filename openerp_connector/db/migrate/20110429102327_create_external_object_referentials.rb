@@ -4,6 +4,7 @@ class CreateExternalObjectReferentials < ActiveRecord::Migration
       t.column :openerp_model, :string
       t.column :rails_model, :string
       t.string :import_function
+      t.string :erp_import_conditions
     end
   end
 
