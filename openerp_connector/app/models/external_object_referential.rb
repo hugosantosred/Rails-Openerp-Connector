@@ -17,7 +17,15 @@ class ExternalObjectReferential < ActiveRecord::Base
   def ext_import(data = nil)
     #Si tiene funcion de importacion la llamamos en lugar de a la conversion
     if self.import_function
-      objects = eval(self.openerp_model.classify).find(:all)
+      conditions = []
+      if self.erp_import_conditions
+        conditions << eval(self.erp_import_conditions)
+      end
+      if conditions.empty?
+        objects = eval(self.openerp_model.classify).find(:all)
+      else
+        objects = eval(self.openerp_model.classify).find(:all, :domain => conditions)
+      end
       objects.each do |obj|        
         self.send(self.import_function, obj)
       end
@@ -155,7 +163,7 @@ class ExternalObjectReferential < ActiveRecord::Base
           #taxonomy_id = Taxonomy.find             
           parent_id =  parent_taxon.id
           taxonomy = Taxonomy.find(parent_taxon.taxonomy.id)
-          categ = taxonomy.taxons.create(:name => category.name, :parent_id => parent_id)
+          categ = taxonomy.taxons.create(:name => category.name, :parent_id => parent_id)          
         else
           parent_id = nil
           ext_taxonomy = ExternalReferentialId.find(:first, :conditions => ['rails_class = ? and openerp_id = ?', "Taxonomy", category.id])
@@ -166,19 +174,135 @@ class ExternalObjectReferential < ActiveRecord::Base
           else
             taxonomy = Taxonomy.new(:name => category.name)
             taxonomy.save
+            ext_taxonomy = ExternalReferentialId.new(:rails_class => "Taxonomy", :openerp_id => category.id, :rails_id => taxonomy.id)
+            ext_taxonomy.save
           end
           taxonomy_id = taxonomy.id
           categ = taxonomy.taxons[0]
         end
-        ex_id = ExternalReferentialId.new(:openerp_id => category.id, :rails_id => categ.id, :rails_class => self.rails_model)
+        ex_id = ExternalReferentialId.new(:openerp_id => category.id, :rails_id => categ.id, :rails_class => "Taxon")
         ex_id.save
     end
     puts "Categoría: #{categ.name} #{categ.permalink}"
     return categ      
   end
+
+#ADDITIONAL FUNCTIONS
+    def find_or_create_template(template)
+      if !Prototype.find_by_name(template.name)
+        proto = Prototype.new(:name => template.name)
+        proto.save
+        template.features.each do |feat|
+          prop = find_or_create_property(feat)
+          prop.prototypes = prop.prototypes + [proto]
+          prop.save
+        end
+      end      
+    end
   
-  def extid_to_id(ext_id)
-    ref = ExternalReferentialId.find(:first, :conditions => ["rails_class = ? and openerp_id = ?", self.rails_model, ext_id])
+    def find_or_create_property(property)
+      prop = Property.find_or_create_by_name(:name => property.name, 
+                                    :presentation => property.presentation)
+      return prop
+    end
+  
+    def add_features(product_id, property, value)
+      prop = find_or_create_property(property)
+      prodProp = ProductProperty.new(:product_id => product_id,
+                            :property_id => prop.id,
+                            :value => value)
+      prodProp.save
+    end
+
+
+
+  def find_or_create_product(prod)
+    
+
+    rails_ref = ExternalReferentialId.find(:first, :conditions => ['rails_class = ? and openerp_id = ?', 'Product', prod.id])
+    #Si ese producto no existe lo crearemos
+    
+    
+    if !rails_ref
+      puts "Nuevo Producto #{prod.name} Categoria: #{prod.categ_id.name}"
+      
+      if prod.dimension_value_ids.empty? && prod.is_master==true
+        
+        product = Product.new(:name => prod.name, :price => prod.list_price, :description => prod.description || '',
+                              :cost_price => prod.standard_price, :available_on => Date.today.to_s)
+        
+        category = find_or_create_category(prod.categ_id)
+        product.taxons << category
+        
+        if prod.categ_ids != false
+          prod.categ_ids.each do |categ|
+            category = find_or_create_category(categ)
+            product.taxons << category
+          end
+        end
+        
+        product.sku = prod.default_code || ''        
+        #product.save
+        
+        if prod.variant_ids != false
+          templ = prod.product_tmpl_id
+          if templ.dimension_type_ids != false
+            templ.dimension_type_ids.each do |opt|
+              option_type = OptionType.find_or_create_by_name(:name => opt.name.parameterize('_').to_s, :presentation => opt.name)
+              opt.value_ids.each do |val|
+                optVal = OptionValue.find_or_create_by_option_type_id_and_name(:option_type_id => option_type.id,
+                                        :name => val.name.parameterize('_').to_s, :presentation => val.name,
+                                        :position => val.sequence)
+              end
+              product.option_types << option_type
+            end
+          end
+          product.save
+                                       
+          prod.variant_ids.each do |variant|
+            variant_ext = ExternalReferentialId.find(:first, :conditions => ['rails_class = ? and openerp_id = ?', 'Variant', variant.id])
+            if !variant_ext
+              if variant.id != prod.id
+                var = Variant.new(:product_id => product.id, :sku => variant.default_code || '',
+                          :price => variant.list_price, :cost_price => variant.standard_price)
+                if variant.dimension_value_ids != false
+                  variant.dimension_value_ids.each do |opt|
+                    option_type = OptionType.find_by_name(opt.dimension_id.name.parameterize('_').to_s)
+                    optVal = OptionValue.find_by_option_type_id_and_name(option_type.id,
+                                                                opt.name.parameterize('_').to_s)
+                    var.option_values << optVal
+                  end
+                end
+                var.save
+                variant_ext = ExternalReferentialId.create(:rails_class => "Variant", :openerp_id => variant.id, :rails_id => var.id)
+                variant_ext.save              
+              end
+            end
+          end
+        end
+        
+        if prod.feature_template
+          find_or_create_template(prod.feature_template)
+        end
+        
+        if prod.features
+          prod.features.each do |feat|
+            add_features(product.id, feat.name, feat.value)
+          end
+        end
+        product.save
+        rails_ref = ExternalReferentialId.create(:rails_class => "Product", :openerp_id => prod.id, :rails_id => product.id)
+        rails_ref.save        
+      end
+    end
+
+  end
+  
+  def extid_to_id(ext_id, r_model = nil)
+    if !r_model
+      r_model = self.rails_model
+    end
+    ref = ExternalReferentialId.find(:first, :conditions => ["rails_class = ? and openerp_id = ?", r_model, ext_id])
     if ref
       return eval(ref.rails_class).find(ref.rails_id) #retornamos el objecto rails
     end
