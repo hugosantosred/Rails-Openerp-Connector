@@ -296,7 +296,8 @@ class ExternalObjectReferential < ActiveRecord::Base
       end
     end
 
-  end
+  end  
+  
   
   def extid_to_id(ext_id, r_model = nil)
     if !r_model
@@ -317,5 +318,4 @@ class ExternalObjectReferential < ActiveRecord::Base
     return nil
   end
   
-
 end

@@ -12,11 +12,9 @@ class OpenerpConnectorExtension < Spree::Extension
      config.gem "ooor"
   end
   
-  def activate
-
-    # make your helper avaliable in all views
-    # Spree::BaseController.class_eval do
-    #   helper YourHelper
-    # end
+  def activate  
+    Dir.glob(File.expand_path("../app/**/*_decorator.rb", __FILE__)).each do |file|
+      (Rails.env == "production") ?  require(file) : load(file)
+    end
   end
 end

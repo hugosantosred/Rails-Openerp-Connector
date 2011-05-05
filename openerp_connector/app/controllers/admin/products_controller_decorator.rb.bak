@@ -1,0 +1,29 @@
+Admin::ProductsController.class_eval do
+  update.after :openerp_create_or_update
+  
+  private
+  def openerp_create_or_update
+    oerp_ref = ExternalReferentialId.find(:first, :conditions => ['rails_class = ? and rails_id = ?', 'Product', object.id])
+    if !oerp_ref
+      prod = ProductProduct.new(:name => object.name, :description => object.description, :list_price => object.price)
+    else
+      prod = ProductProduct.find(oerp_ref.openerp_id)        
+    end
+      
+      if object.taxons.empty?
+        erp_categ = ProductCategory.find(:first)
+      else
+        erp_categ = OpenerpShop.first.find_or_create_erp_category(object.taxons[0])
+      end      
+      prod.categ_id = erp_categ.id           
+      debugger
+      #prod = ProductProduct.new(:name => object.name, :categ_id => erp_categ.id, :description => object.description, :list_price => object.price)
+      prod.save
+    if !oerp_ref
+      oerp_ref = ExternalReferentialId.new(:rails_class => "Product", :openerp_id => prod.id, :rails_id => object.id)
+      oerp_ref.save
+      oerp_ref.ir_model_data("product_product")
+    end      
+  end
+  
+end

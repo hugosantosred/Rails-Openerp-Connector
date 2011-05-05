@@ -35,5 +35,4 @@ class Admin::ExternalObjectReferentialsController < Admin::BaseController
     collection = ExternalObjectReferential.all
   end
 
-
 end
